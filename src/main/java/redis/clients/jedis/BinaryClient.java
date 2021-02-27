@@ -1095,11 +1095,11 @@ public class BinaryClient extends Connection {
   public void memoryDoctor() {
     sendCommand(MEMORY, Keyword.DOCTOR.getRaw());
   }
-  
+
   public void memoryUsage(final byte[] key) {
     sendCommand(MEMORY, Keyword.USAGE.getRaw(), key);
   }
-  
+
   public void memoryUsage(final byte[] key, final int samples) {
     sendCommand(MEMORY, Keyword.USAGE.getRaw(), key, Keyword.SAMPLES.getRaw(), toByteArray(samples));
   }
@@ -1404,17 +1404,17 @@ public class BinaryClient extends Connection {
   public void hstrlen(final byte[] key, final byte[] field) {
     sendCommand(HSTRLEN, key, field);
   }
-  
+
   public void xadd(final byte[] key, final byte[] id, final Map<byte[], byte[]> hash, long maxLen, boolean approximateLength) {
       int maxLexArgs = 0;
       if(maxLen < Long.MAX_VALUE) { // optional arguments
         if(approximateLength) {
-          maxLexArgs = 3; // e.g. MAXLEN ~ 1000 
+          maxLexArgs = 3; // e.g. MAXLEN ~ 1000
         } else {
           maxLexArgs = 2; // e.g. MAXLEN 1000
         }
       }
-    
+
 	  final byte[][] params = new byte[2 + maxLexArgs + hash.size() * 2][];
 	  int index = 0;
 	  params[index++] = key;
@@ -1425,7 +1425,7 @@ public class BinaryClient extends Connection {
 	    }
 	    params[index++] = toByteArray(maxLen);
 	  }
-	  
+
 	  params[index++] = id;
 	  for (final Entry<byte[], byte[]> entry : hash.entrySet()) {
 	    params[index++] = entry.getKey();
@@ -1433,17 +1433,25 @@ public class BinaryClient extends Connection {
 	  }
 	  sendCommand(XADD, params);
   }
-  
+
   public void xlen(final byte[] key) {
      sendCommand(XLEN, key);
   }
-  
-  public void xrange(final byte[] key, final byte[] start, final byte[] end, final long count) { 
-     sendCommand(XRANGE, key, start, end, Keyword.COUNT.getRaw(), toByteArray(count));
+
+  public void xrange(final byte[] key, final byte[] start, final byte[] end, final long count) {
+    if (count > 0) {
+      sendCommand(XRANGE, key, start, end, Keyword.COUNT.getRaw(), toByteArray(count));
+    } else {
+      sendCommand(XRANGE, key, start, end);
+    }
   }
-  
+
   public void xrevrange(final byte[] key, final byte[] end, final byte[] start, final int count) {
-    sendCommand(XREVRANGE, key, end, start, Keyword.COUNT.getRaw(), toByteArray(count));
+    if (count > 0) {
+      sendCommand(XREVRANGE, key, end, start, Keyword.COUNT.getRaw(), toByteArray(count));
+    } else {
+      sendCommand(XREVRANGE, key, end, start);
+    }
   }
 
   public void xread(final int count, final long block, final Map<byte[], byte[]> streams) {
@@ -1456,7 +1464,7 @@ public class BinaryClient extends Connection {
       params[streamsIndex++] = Keyword.BLOCK.getRaw();
       params[streamsIndex++] = toByteArray(block);
     }
-    
+
     params[streamsIndex++] = Keyword.STREAMS.getRaw();
     int idsIndex = streamsIndex + streams.size();
 
@@ -1464,10 +1472,10 @@ public class BinaryClient extends Connection {
       params[streamsIndex++] = entry.getKey();
       params[idsIndex++] = entry.getValue();
     }
-    
+
     sendCommand(XREAD, params);
  }
-  
+
   public void xack(final byte[] key, final byte[] group, final byte[]... ids) {
     final byte[][] params = new byte[2 + ids.length][];
     int index = 0;
@@ -1478,27 +1486,27 @@ public class BinaryClient extends Connection {
     }
     sendCommand(XACK, params);
   }
-   
+
   public void xgroupCreate(final byte[] key, final byte[] groupname, final byte[] id, boolean makeStream) {
     if(makeStream) {
-      sendCommand(XGROUP, Keyword.CREATE.getRaw(), key, groupname, id, Keyword.MKSTREAM.getRaw());  
+      sendCommand(XGROUP, Keyword.CREATE.getRaw(), key, groupname, id, Keyword.MKSTREAM.getRaw());
     } else {
-      sendCommand(XGROUP, Keyword.CREATE.getRaw(), key, groupname, id);  
+      sendCommand(XGROUP, Keyword.CREATE.getRaw(), key, groupname, id);
     }
   }
 
   public void xgroupSetID(final byte[] key, final byte[] groupname, final byte[] id) {
-    sendCommand(XGROUP, Keyword.SETID.getRaw(), key, groupname, id);    
+    sendCommand(XGROUP, Keyword.SETID.getRaw(), key, groupname, id);
   }
 
   public void xgroupDestroy(final byte[] key, final byte[] groupname) {
-    sendCommand(XGROUP, Keyword.DESTROY.getRaw(), key, groupname);    
+    sendCommand(XGROUP, Keyword.DESTROY.getRaw(), key, groupname);
   }
 
   public void xgroupDelConsumer(final byte[] key, final byte[] groupname, final byte[] consumerName) {
-    sendCommand(XGROUP, Keyword.DELCONSUMER.getRaw(), key, groupname, consumerName);    
+    sendCommand(XGROUP, Keyword.DELCONSUMER.getRaw(), key, groupname, consumerName);
   }
-   
+
   public void xdel(final byte[] key, final byte[]... ids) {
     final byte[][] params = new byte[1 + ids.length][];
     int index = 0;
@@ -1508,7 +1516,7 @@ public class BinaryClient extends Connection {
     }
     sendCommand(XDEL, params);
   }
-  
+
   public void xtrim(byte[] key, long maxLen, boolean approximateLength) {
     if(approximateLength) {
       sendCommand(XTRIM, key, Keyword.MAXLEN.getRaw(), Protocol.BYTES_TILDE ,toByteArray(maxLen));
@@ -1516,9 +1524,9 @@ public class BinaryClient extends Connection {
       sendCommand(XTRIM, key, Keyword.MAXLEN.getRaw(), toByteArray(maxLen));
     }
   }
-  
+
   public void xreadGroup(byte[] groupname, byte[] consumer, int count, long block, boolean noAck, Map<byte[], byte[]> streams) {
-    
+
     int optional = 0;
     if(count>0) {
       optional += 2;
@@ -1529,8 +1537,8 @@ public class BinaryClient extends Connection {
     if(noAck) {
       optional += 1;
     }
-    
-    
+
+
     final byte[][] params = new byte[4 + optional + streams.size() * 2][];
 
     int streamsIndex = 0;
@@ -1549,17 +1557,17 @@ public class BinaryClient extends Connection {
       params[streamsIndex++] = Keyword.NOACK.getRaw();
     }
     params[streamsIndex++] = Keyword.STREAMS.getRaw();
-    
+
     int idsIndex = streamsIndex + streams.size();
     for (final Entry<byte[], byte[]> entry : streams.entrySet()) {
       params[streamsIndex++] = entry.getKey();
       params[idsIndex++] = entry.getValue();
     }
-    
+
     sendCommand(XREADGROUP, params);
   }
 
-  
+
   public void xpending(byte[] key, byte[] groupname, byte[] start, byte[] end, int count, byte[] consumername) {
     if(consumername == null) {
       sendCommand(XPENDING, key, groupname, start, end, toByteArray(count));
@@ -1569,14 +1577,14 @@ public class BinaryClient extends Connection {
   }
 
   public void xclaim(byte[] key, byte[] groupname, byte[] consumername, long minIdleTime, long newIdleTime, int retries, boolean force, byte[][] ids) {
-      
+
       ArrayList<byte[]> arguments = new ArrayList<>(10 + ids.length);
 
       arguments.add(key);
       arguments.add(groupname);
       arguments.add(consumername);
       arguments.add(toByteArray(minIdleTime));
-      
+
       Collections.addAll(arguments, ids);
 
       if(newIdleTime > 0) {
@@ -1585,10 +1593,10 @@ public class BinaryClient extends Connection {
       }
       if(retries > 0) {
         arguments.add(Keyword.RETRYCOUNT.getRaw());
-        arguments.add(toByteArray(retries));        
+        arguments.add(toByteArray(retries));
       }
       if(force) {
-        arguments.add(Keyword.FORCE.getRaw());        
+        arguments.add(Keyword.FORCE.getRaw());
       }
       sendCommand(XCLAIM, arguments.toArray(new byte[arguments.size()][]));
   }
